@@ -455,20 +455,34 @@ function copyRoomCode() {
 
 // Leave the current room
 function leaveRoom() {
-  // Close all peer connections
-  for (const userId in peerConnections) {
-    peerConnections[userId].close();
+  if (!currentRoom) {
+    return; // No room to leave
   }
-  peerConnections = {};
-  peerUsernames = {};
-  
-  // Clear the remote videos
-  remoteVideos.innerHTML = '';
-  
-  // Reset the UI
-  switchToHomeScreen();
-  
-  showNotification('You have left the room');
+
+  // Inform the server that we're leaving the room
+  socket.emit('leave-room', currentRoom, () => {
+    console.log(`Left room: ${currentRoom}`);
+    
+    // Close all peer connections
+    for (const userId in peerConnections) {
+      if (peerConnections[userId]) {
+        peerConnections[userId].close();
+      }
+    }
+    
+    // Reset variables
+    peerConnections = {};
+    peerUsernames = {};
+    currentRoom = null;
+    
+    // Clear the remote videos
+    remoteVideos.innerHTML = '';
+    
+    // Reset the UI
+    switchToHomeScreen();
+    
+    showNotification('You have left the room');
+  });
 }
 
 // Toggle mute/unmute
