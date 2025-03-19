@@ -138,6 +138,45 @@ io.on('connection', (socket) => {
   });
 });
 
+// Add this to your socket event handlers in app.js
+socket.on('leave-room', (roomId, callback) => {
+  try {
+    if (!roomId || !socket.roomId) {
+      return callback && callback();
+    }
+    
+    console.log(`User ${socket.username} (${socket.id}) is leaving room ${roomId}`);
+    
+    const room = rooms.get(roomId);
+    if (room) {
+      // Remove user from room participants
+      room.participants.delete(socket.id);
+      
+      // Notify other participants about the user leaving
+      socket.to(roomId).emit('user-left', socket.id);
+      
+      console.log(`User ${socket.username} (${socket.id}) removed from room ${roomId}`);
+      console.log(`Room ${roomId} has ${room.participants.size} participants left`);
+      
+      // If the room is empty, delete it
+      if (room.participants.size === 0) {
+        rooms.delete(roomId);
+        console.log(`Room ${roomId} deleted (empty)`);
+      }
+    }
+    
+    // Leave the socket.io room
+    socket.leave(roomId);
+    socket.roomId = null;
+    
+    if (callback) callback();
+  } catch (error) {
+    console.error('Error handling leave-room:', error);
+    if (callback) callback({ error: 'Failed to leave room' });
+  }
+});
+
+
 // Generate a 6-character room code
 function generateRoomCode() {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
